@@ -6,7 +6,7 @@ class Pipe extends Sprite
 {
     constructor({position, scale, image, reverted = false}) {
         super({position: position, scale: scale, image});
-        this.speedX = -2
+        this.speedX = -3 * scale
         this.passed = false
         this.reverted = reverted
     }

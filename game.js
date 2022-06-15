@@ -4,9 +4,20 @@
 class Game
 {
     constructor() {
+        this.scale = 1
+        //under 1000 pixels it is considered a mobile device
+        if(window.innerWidth < 1000)
+        {
+            this.scale = window.innerWidth / 500
+            window.addEventListener("touchstart", this.touch.bind(this), { passive: false })
+        }
+        else {
+            window.addEventListener('click', this.click.bind(this))
+        }
+
         this.canvas = document.querySelector('canvas')
-        this.canvas.width = 500
-        this.canvas.height = 500
+        this.canvas.width = 500 * this.scale
+        this.canvas.height = 500 * this.scale
         this.canvas_ctx = this.canvas.getContext('2d')
 
         this.sound = new Sound()
@@ -19,8 +30,10 @@ class Game
         this.initializeBird()
         this.initializeScore()
         this.initializeMenus()
-
-        window.addEventListener('click', this.click.bind(this))
+        this.lastFrameTime = 0
+        this.fps = 1000 / 60
+        this.delta = 0
+        this.lastPipeUpdate = 0
     }
 
     /**
@@ -41,9 +54,10 @@ class Game
 
         let message = new Sprite({
             position: {
-                x: this.canvas.width / 2 - 184 / 2,
-                y: this.canvas.height / 2 - 267 / 2
+                x: this.canvas.width / 2 - 184 / 2 * this.scale,
+                y: this.canvas.height / 2 - 267 / 2 * this.scale
             },
+            scale: this.scale,
             image: startingMessage,
         })
 
@@ -52,30 +66,34 @@ class Game
                 x: 0,
                 y: 0
             },
+            scale: this.scale,
             image: backgroundDay,
         })
 
         let background2 = new Sprite({
             position: {
-                x: 288,
+                x: 288 * this.scale,
                 y: 0
             },
+            scale: this.scale,
             image: backgroundDay,
         })
 
         let terrain1 = new Sprite({
             position: {
                 x: 0,
-                y: this.canvas.height - 70,
+                y: this.canvas.height - 70 * this.scale,
             },
+            scale: this.scale,
             image: base,
         })
 
         let terrain2 = new Sprite({
             position: {
                 x: 336,
-                y: this.canvas.height - 70,
+                y: this.canvas.height - 70 * this.scale,
             },
+            scale: this.scale,
             image: base,
         })
 
@@ -87,7 +105,7 @@ class Game
             minX: 0,
             maxX: this.canvas.width,
             minY: 0,
-            maxY: this.canvas.height - 80
+            maxY: this.canvas.height - 80 * this.scale
         }
     }
 
@@ -109,10 +127,10 @@ class Game
 
         this.bird = new Bird({
             position: {
-                x: this.canvas.width / 2 - 100,
-                y: this.canvas.height / 2 + 35
+                x: this.canvas.width / 2 - 100 * this.scale,
+                y: this.canvas.height / 2 + 35 * this.scale
             },
-            scale: 1,
+            scale: this.scale,
             images: images,
             callback: this.birdEvent.bind(this)
         } )
@@ -149,30 +167,31 @@ class Game
         this.score = new Score({
             position: {
                 x: this.canvas.width / 2,
-                y: this.world.minY + 50
+                y: this.world.minY + 50 * this.scale
             },
-            scale: 1,
+            scale: this.scale,
             images: scores,
+            betweenLength: 25 * this.scale
         } )
 
 
         this.finalScore = new Score({
             position: {
-                x: this.canvas.width / 4 * 3 - 40,
-                y: this.canvas.height / 3 + 22.5
+                x: this.canvas.width / 4 * 3 - 40 * this.scale,
+                y: this.canvas.height / 3 + 22.5 * this.scale
             },
-            scale: 0.7,
+            scale: this.scale * 0.7,
             images: scores,
-            betweenLength: 18.5})
+            betweenLength: 18.5 * this.scale})
 
         this.bestScore = new Score({
             position: {
-                x: this.canvas.width / 4 * 3 - 40,
-                y: this.canvas.height / 2 - 15
+                x: this.canvas.width / 4 * 3 - 40 * this.scale,
+                y: this.canvas.height / 2 - 15 * this.scale
             },
-            scale: 0.7,
+            scale:  this.scale * 0.7,
             images: scores,
-            betweenLength: 18.5})
+            betweenLength: 18.5 * this.scale})
 
 
     }
@@ -186,10 +205,11 @@ class Game
         gameover.src = './assets/gameover.png'
         this.gameoverMessage = new Sprite({
             position: {
-                x: this.canvas.width / 2 - 192 / 2,
+                x: this.canvas.width / 2 - 192 / 2 * this.scale,
                 y: this.canvas.height / 2 - this.world.maxY * 0.8 / 2
             },
             image: gameover,
+            scale: this.scale
         })
 
         let scoreMenuImg = new Image()
@@ -201,7 +221,7 @@ class Game
                 y: this.canvas.height / 2 - this.world.maxY * 0.75 / 2
             },
             image: scoreMenuImg,
-            scale: 0.2
+            scale: 0.2 * this.scale
         })
 
         let startButtonImg = new Image()
@@ -213,7 +233,7 @@ class Game
                 y: this.canvas.height / 2 + this.world.maxY * 0.1 / 2
             },
             image: startButtonImg,
-            scale: 0.1
+            scale: 0.1 * this.scale
         })
 
     }
@@ -247,7 +267,37 @@ class Game
         }
     }
 
-    update()
+    //https://isaacsukin.com/news/2015/01/detailed-explanation-javascript-game-loops-and-timing
+    run(timestamp)
+    {
+        if(timestamp < this.lastFrameTime + this.fps)
+        {
+            window.requestAnimationFrame(game.run.bind(game))
+            return
+        }
+
+        this.delta =+ timestamp - this.lastFrameTime
+        this.lastFrameTime = timestamp
+
+        let numUpdateSteps = 0
+
+        while (this.delta >= this.fps) {
+            this.update(timestamp)
+            this.delta -= this.fps
+            if (++numUpdateSteps >= 240) {
+                this.delta = 0
+                break;
+            }
+        }
+
+        this.draw()
+
+        window.requestAnimationFrame(game.run.bind(game));
+    }
+
+
+
+    update(timestamp)
     {
         if (this.started && !this.gameover)
         {
@@ -257,8 +307,9 @@ class Game
                 pipe.update()
             })
 
-            if(this.frameCount % 150 === 0)
+            if(this.lastPipeUpdate + 2500 < timestamp)
             {
+                this.lastPipeUpdate = timestamp
                 this.spawnPipes()
                 this.despawnPipes()
             }
@@ -272,8 +323,6 @@ class Game
         }
 
         this.draw()
-
-        window.requestAnimationFrame(game.update.bind(game));
     }
 
     /**
@@ -282,7 +331,7 @@ class Game
     spawnPipes()
     {
 
-        let height = Utils.randomIntBetween(this.world.minY + 200, this.world.maxY)
+        let height = Utils.randomIntBetween(this.world.minY + 200 * this.scale, this.world.maxY)
 
         let pipe = new Image()
         pipe.src = './assets/pipe-green.png'
@@ -295,6 +344,7 @@ class Game
                 y: height
             },
             image: pipe,
+            scale: this.scale
         })
 
         let pipe2 = new Pipe({position: {
@@ -302,7 +352,8 @@ class Game
                 y: height - this.world.maxY,
             },
             image: flippedPipe,
-            reverted: true
+            reverted: true,
+            scale: this.scale
         })
 
         this.pipes.push(pipe1)
@@ -344,7 +395,38 @@ class Game
         if(!this.bird.gravitySpeed - this.bird.speedY > this.bird.maximumSpeedY && !this.gameover)
         {
             this.sound.playSound('wing')
-            this.bird.speedY += -3.5
+            this.bird.speedY += -5.0 * this.scale
+        }
+    }
+
+    /**
+     * the touch method supports mobile support for flappy bird
+     * @param e, touch start event
+     */
+    touch(e)
+    {
+        e.preventDefault();
+
+        if(!this.sound.initialized)
+            this.sound.initializeSounds()
+
+
+        if(!this.started)
+        {
+            this.started = true
+            return
+        }
+
+        let x = e.touches[0].clientX;
+        let y = e.touches[0].clientY;
+
+        if(this.startButton.isPointInHitBox(x, y) && this.gameover)
+            this.reset()
+
+        if(!this.bird.gravitySpeed - this.bird.speedY > this.bird.maximumSpeedY && !this.gameover)
+        {
+            this.sound.playSound('wing')
+            this.bird.speedY += -5.0 * this.scale
         }
     }
 
@@ -409,7 +491,7 @@ class Game
 
 
 game = new Game()
-window.requestAnimationFrame(game.update.bind(game));
+window.requestAnimationFrame(game.run.bind(game));
 //game.intervalId = setInterval(game.update.bind(game), 1000 / game.fps)
 
 

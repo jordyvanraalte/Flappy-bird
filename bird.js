@@ -8,8 +8,8 @@ class Bird extends Sprite {
 
         // birds movement
         this.speedY = 0
-        this.maximumSpeedY = -2
-        this.gravity = 0.1
+        this.maximumSpeedY = -3 * this.scale
+        this.gravity = 0.2 * this.scale
         this.gravitySpeed = 0
 
         // angle bird is turning
@@ -163,10 +163,10 @@ class Bird extends Sprite {
      */
     reset()
     {
-        this.position = {x: game.canvas.width / 2 - 100,
-            y: game.canvas.height / 2 + 35
+        this.position = {x: game.canvas.width / 2 - 100 * this.scale,
+            y: game.canvas.height / 2 + 35 * this.scale
         }
-        this.gravity = 0.1
+        this.gravity = 0.2 * this.scale
         this.gravitySpeed = 0
         this.speedY = 0
         this.angle = 0

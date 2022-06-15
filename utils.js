@@ -18,7 +18,7 @@ class Utils {
      */
     static saveScore(score)
     {
-        document.cookie = `score=${score}`;
+        document.cookie = `score=${score}; remember_me=true`;
     }
 
     /**
