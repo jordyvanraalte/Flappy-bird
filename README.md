@@ -18,3 +18,4 @@ And with the following command, the Docker container can be run on the desired p
 docker run -d -p 80:80 flappy-bird:v1 .
 ````
 
+A special thanks to Ylva Tröjbom for recreating some assets and special thanks to [Samuelcust](https://github.com/samuelcust/flappy-bird-assets) providing some Flappy bird assets.
